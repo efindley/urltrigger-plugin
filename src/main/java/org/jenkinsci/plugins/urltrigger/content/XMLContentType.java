@@ -121,17 +121,17 @@ public class XMLContentType extends URLTriggerContentType {
             Object initValue = entry.getValue();
             Object newValue = newResults.get(expression);
 
-            if (initValue == null && newValue == null) {
-                log.info(String.format("There is no matching for the expression '%s'.", expression));
-                continue;
+            if (initValue == null ) {
+                if(newValue == null) {
+                    log.info(String.format("There is no matching for the expression '%s'.", expression));
+                    continue;
+                } else {
+                    log.info(String.format("There was no value and now there is a new value for the expression '%s'.", expression));
+                    return true;
+                }
             }
 
-            if (initValue == null && newValue != null) {
-                log.info(String.format("There was no value and now there is a new value for the expression '%s'.", expression));
-                return true;
-            }
-
-            if (initValue != null && newValue == null) {
+            if (newValue == null) {
                 log.info(String.format("There was a value and now there is no value for the expression '%s'.", expression));
                 return true;
             }

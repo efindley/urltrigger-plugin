@@ -2,10 +2,12 @@ package org.jenkinsci.plugins.urltrigger.content;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serializable;
+
 /**
  * @author Gregory Boissinot
  */
-public class JSONContentEntry {
+public class JSONContentEntry implements Serializable {
 
     private String jsonPath;
 

@@ -89,17 +89,17 @@ public class JSONContentType extends URLTriggerContentType {
             Object initValue = entry.getValue();
             Object newValue = newResults.get(jsonPath);
 
-            if (initValue == null && newValue == null) {
-                log.info(String.format("There is no matching for the JSON Path '%s'.", jsonPath));
-                continue;
+            if (initValue == null) {
+                if(newValue == null) {
+                    log.info(String.format("There is no matching for the JSON Path '%s'.", jsonPath));
+                    continue;
+                } else {
+                    log.info(String.format("There was no value and now there is a new value for the JSON Path '%s'.", jsonPath));
+                    return true;
+                }
             }
 
-            if (initValue == null && newValue != null) {
-                log.info(String.format("There was no value and now there is a new value for the JSON Path '%s'.", jsonPath));
-                return true;
-            }
-
-            if (initValue != null && newValue == null) {
+            if (newValue == null) {
                 log.info(String.format("There was a value and now there is no value for the JSON Path '%s'.", jsonPath));
                 return true;
             }

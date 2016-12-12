@@ -14,10 +14,16 @@ import hudson.Extension;
 import hudson.ProxyConfiguration;
 import hudson.Util;
 import hudson.console.AnnotatedLargeText;
-import hudson.model.*;
+import hudson.model.Action;
+import hudson.model.BuildableItem;
+import hudson.model.Descriptor;
+import hudson.model.Item;
+import hudson.model.Job;
+import hudson.model.Node;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
 import hudson.util.SequentialExecutionQueue;
+import jenkins.model.Jenkins;
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
@@ -25,8 +31,6 @@ import net.sf.json.JSONObject;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.jelly.XMLOutput;
 import org.apache.commons.net.ftp.FTPClient;
-import org.jenkinsci.lib.envinject.EnvInjectException;
-import org.jenkinsci.lib.envinject.service.EnvVarsResolver;
 import org.jenkinsci.lib.xtrigger.AbstractTrigger;
 import org.jenkinsci.lib.xtrigger.XTriggerDescriptor;
 import org.jenkinsci.lib.xtrigger.XTriggerException;
@@ -52,7 +56,12 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -66,7 +75,7 @@ public class URLTrigger extends AbstractTrigger {
 
     private static Logger LOGGER = Logger.getLogger(URLTrigger.class.getName());
 
-    private List<URLTriggerEntry> entries = new ArrayList<URLTriggerEntry>();
+    private List<URLTriggerEntry> entries = new ArrayList<>();
 
     private boolean labelRestriction;
 
@@ -98,7 +107,7 @@ public class URLTrigger extends AbstractTrigger {
             String url = entry.getUrl();
             URLTriggerContentType[] urlTriggerContentTypes = entry.getContentTypes();
             if (entry.getContentTypes() != null) {
-                subActionTitles = new HashMap<String, String>(urlTriggerContentTypes.length);
+                subActionTitles = new HashMap<>(urlTriggerContentTypes.length);
                 for (URLTriggerContentType fsTriggerContentFileType : urlTriggerContentTypes) {
                     if (fsTriggerContentFileType != null) {
                         Descriptor<URLTriggerContentType> descriptor = fsTriggerContentFileType.getDescriptor();
@@ -132,8 +141,8 @@ public class URLTrigger extends AbstractTrigger {
         }
 
         @SuppressWarnings("unused")
-        public AbstractProject<?, ?> getOwner() {
-            return (AbstractProject) job;
+        public Job<?, ?> getOwner() {
+            return (Job) job;
         }
 
         @SuppressWarnings("unused")
@@ -175,16 +184,8 @@ public class URLTrigger extends AbstractTrigger {
 
     private String getURLValue(URLTriggerEntry entry, Node node) throws XTriggerException {
         String entryURL = entry.getUrl();
-        if (entryURL != null) {
-            EnvVarsResolver varsRetriever = new EnvVarsResolver();
-            Map<String, String> envVars;
-            try {
-                envVars = varsRetriever.getPollingEnvVars((AbstractProject) job, node);
-            } catch (EnvInjectException e) {
-                throw new XTriggerException(e);
-            }
-            return Util.replaceMacro(entryURL, envVars);
-        }
+        if (entryURL != null)
+            return resolveEnvVars(entryURL, job, node);
         return null;
     }
 
@@ -225,7 +226,7 @@ public class URLTrigger extends AbstractTrigger {
         Client client = getClientObject(resolvedEntry, log);
 
         String url = resolvedEntry.getResolvedURL();
-        log.info(String.format("Invoking the url: \n %s", url));
+        log.info(String.format("Invoking the url: %n %s", url));
         ClientResponse clientResponse = client.resource(url).get(ClientResponse.class);
 
         URLTriggerEntry entry = resolvedEntry.getEntry();
@@ -363,7 +364,7 @@ public class URLTrigger extends AbstractTrigger {
         DefaultApacheHttpClientConfig config = new DefaultApacheHttpClientConfig();
 
         //-- Proxy
-        Hudson h = Hudson.getInstance(); // this code might run on slaves
+        Jenkins h = Jenkins.getInstance(); // this code might run on slaves
         ProxyConfiguration p = h != null ? h.proxy : null;
         if (p != null) {
             config.getProperties().put(DefaultApacheHttpClientConfig.PROPERTY_PROXY_URI, "http://" + p.name + ":" + p.port);
@@ -445,7 +446,8 @@ public class URLTrigger extends AbstractTrigger {
 
     @Override
     public URLTriggerDescriptor getDescriptor() {
-        return (URLTriggerDescriptor) Hudson.getInstance().getDescriptorOrDie(getClass());
+        //TODO: getClass doesn't work with Mockito spy. figure out if this change is appropriate or will cause a problem.
+        return (URLTriggerDescriptor) Jenkins.getInstance().getDescriptorOrDie(URLTrigger.class /*this.getClass()*/);
     }
 
     private static FTPClient getFTPClientObject(URLTriggerResolvedEntry resolvedEntry) throws URISyntaxException, IOException {
@@ -553,7 +555,7 @@ public class URLTrigger extends AbstractTrigger {
 
             Object entryObject = formData.get("urlElements");
 
-            List<URLTriggerEntry> entries = new ArrayList<URLTriggerEntry>();
+            List<URLTriggerEntry> entries = new ArrayList<>();
             if (entryObject instanceof JSONObject) {
                 entries.add(fillAndGetEntry(req, (JSONObject) entryObject));
             } else {
@@ -657,7 +659,7 @@ public class URLTrigger extends AbstractTrigger {
 
         @SuppressWarnings("unchecked")
         public DescriptorExtensionList getListURLTriggerDescriptors() {
-            return DescriptorExtensionList.createDescriptorList(Hudson.getInstance(), URLTriggerContentType.class);
+            return DescriptorExtensionList.createDescriptorList(Jenkins.getInstance(), URLTriggerContentType.class);
         }
 
         public FormValidation doCheckURL(@QueryParameter String value) {
