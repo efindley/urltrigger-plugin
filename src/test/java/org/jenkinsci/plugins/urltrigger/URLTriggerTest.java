@@ -23,12 +23,39 @@ public class URLTriggerTest {
         URLTriggerEntry entry = new URLTriggerEntry();
         entry.setUrl("");
 
-        URLTrigger trigger = new URLTrigger("* * * * *", Arrays.asList(entry), false, "testTrigger");
+        URLTrigger trigger = new URLTrigger("* * * * *", Arrays.asList(entry), false, "testTrigger", true);
         URLTrigger triggerSpy = Mockito.spy(trigger);
         doReturn(true).when(triggerSpy).checkIfModified(any(Node.class),any(XTriggerLog.class));
         assertTrue(triggerSpy.checkIfModified(null, null));
 
         j.jenkins.setNumExecutors(1);
+        j.createOnlineSlave();
+        WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+                "node { echo 'hello world' }"));
+
+
+        p.addTrigger(triggerSpy);
+        triggerSpy.start(p, true);
+        triggerSpy.run();
+
+        Thread.sleep(60000);
+
+        assertTrue(!p.getBuilds().isEmpty());
+        j.assertLogContains("hello world", p.getFirstBuild());
+
+    }
+
+    @Test
+    public void testWorkflowJobNoPollingNode() throws Exception {
+        URLTriggerEntry entry = new URLTriggerEntry();
+        entry.setUrl("");
+
+        URLTrigger trigger = new URLTrigger("* * * * *", Arrays.asList(entry), false, "testTrigger", false);
+        URLTrigger triggerSpy = Mockito.spy(trigger);
+        doReturn(true).when(triggerSpy).checkIfModified(any(Node.class),any(XTriggerLog.class));
+        assertTrue(triggerSpy.checkIfModified(null, null));
+
         j.createOnlineSlave();
         WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition(

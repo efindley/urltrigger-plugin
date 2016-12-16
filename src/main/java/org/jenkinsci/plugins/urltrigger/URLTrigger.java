@@ -79,14 +79,22 @@ public class URLTrigger extends AbstractTrigger {
 
     private boolean labelRestriction;
 
+    private boolean pollingNode;
+
     @DataBoundConstructor
     public URLTrigger(String cronTabSpec,
                       List<URLTriggerEntry> entries,
                       boolean labelRestriction,
-                      String triggerLabel) throws ANTLRException {
+                      String triggerLabel, boolean pollingNode) throws ANTLRException {
         super(cronTabSpec, triggerLabel);
         this.entries = entries;
         this.labelRestriction = labelRestriction;
+        this.pollingNode = pollingNode;
+    }
+
+    @Override
+    protected boolean requirePollingNode() {
+        return isPollingNode();
     }
 
     @SuppressWarnings("unused")
@@ -97,6 +105,11 @@ public class URLTrigger extends AbstractTrigger {
     @SuppressWarnings("unused")
     public boolean isLabelRestriction() {
         return labelRestriction;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean isPollingNode() {
+        return pollingNode;
     }
 
     @Override
@@ -205,6 +218,11 @@ public class URLTrigger extends AbstractTrigger {
         }
 
         return false;
+    }
+
+    @Override
+    protected boolean checkIfModified(XTriggerLog log) throws XTriggerException {
+        return checkIfModified(null, log);
     }
 
     private boolean checkIfModifiedEntry(URLTriggerEntry entry, Node pollingNode, XTriggerLog log) throws XTriggerException {
@@ -546,11 +564,17 @@ public class URLTrigger extends AbstractTrigger {
 
             String cronTabSpec = formData.getString("cronTabSpec");
             boolean labelRestriction = false;
+            boolean pollingNode = false;
             String triggerLabel = null;
             Object labelRestrictionObject = formData.get("labelRestriction");
             if (labelRestrictionObject != null) {
                 labelRestriction = true;
                 triggerLabel = ((JSONObject) labelRestrictionObject).getString("triggerLabel");
+            }
+
+            Object pollingNodeObject = formData.get("pollingNode");
+            if(pollingNodeObject != null) {
+                pollingNode = true;
             }
 
             Object entryObject = formData.get("urlElements");
@@ -569,7 +593,7 @@ public class URLTrigger extends AbstractTrigger {
 
             URLTrigger urlTrigger;
             try {
-                urlTrigger = new URLTrigger(cronTabSpec, entries, labelRestriction, triggerLabel);
+                urlTrigger = new URLTrigger(cronTabSpec, entries, labelRestriction, triggerLabel, pollingNode);
             } catch (ANTLRException e) {
                 throw new RuntimeException(e.getMessage());
             }

@@ -110,16 +110,25 @@
         <f:entry>
             <table style="width:100%">
                 <f:optionalBlock
-                        name="labelRestriction"
-                        field="labelRestriction"
-                        checked="${instance.labelRestriction}"
-                        title="${%Restrict where the polling can be run}">
+                        name="pollingNode"
+                        field="pollingNode"
+                        checked="${instance.pollingNode}"
+                        title="${%Require a polling node}">
 
                     <f:block>
-                        <f:entry title="Label Expression">
-                            <f:textbox name="triggerLabel"
-                                       value="${instance.triggerLabel}"/>
-                        </f:entry>
+                        <f:optionalBlock
+                                name="labelRestriction"
+                                field="labelRestriction"
+                                checked="${instance.labelRestriction}"
+                                title="${%Restrict where the polling can be run}">
+
+                            <f:block>
+                                <f:entry title="Label Expression">
+                                    <f:textbox name="triggerLabel"
+                                               value="${instance.triggerLabel}"/>
+                                </f:entry>
+                            </f:block>
+                        </f:optionalBlock>
                     </f:block>
                 </f:optionalBlock>
             </table>
